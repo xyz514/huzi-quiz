@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#101728" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>护资刷题 2027</title>
+<style>
+  :root{
+    --bg:#101728; --card:#1b2438; --card2:#232e46; --line:rgba(255,255,255,.1);
+    --text:#e9eefb; --muted:#8b98b8; --acc:#4f8cff; --ok:#22c55e; --no:#ef4444;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{
+    background:var(--bg);min-height:100vh;color:var(--text);font-size:16px;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:max(12px,env(safe-area-inset-top)) 13px calc(22px + env(safe-area-inset-bottom));
+  }
+  header{display:flex;align-items:center;justify-content:space-between;margin:0 2px 9px}
+  h1{font-size:17px;margin:0;font-weight:600}
+  .topbtn{display:flex;gap:7px}
+  button{font:inherit;border:0;border-radius:11px;padding:9px 13px;cursor:pointer;
+         background:rgba(255,255,255,.09);color:var(--text);font-size:14px}
+  button:active{transform:scale(.97)}
+  button:disabled{opacity:.45}
+  button.p{background:linear-gradient(135deg,#4f8cff,#7c5cff);color:#fff;font-weight:600}
+  .bar{display:flex;align-items:center;gap:8px;margin:0 2px 11px;font-size:12px;color:var(--muted)}
+  .chip{background:rgba(255,255,255,.07);border-radius:8px;padding:5px 9px;white-space:nowrap}
+  .progress{flex:1;height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+  .progress i{display:block;height:100%;background:var(--acc);width:0;transition:width .25s}
+  .qcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px 15px 6px;margin-bottom:11px}
+  .meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .tag{font-size:11px;padding:3px 8px;border-radius:6px;background:rgba(79,140,255,.16);color:#9fc0ff}
+  .tag.t2{background:rgba(124,92,255,.16);color:#c4b0ff}
+  .tag.t3{background:rgba(34,197,94,.14);color:#86efac}
+  .qtext{font-size:17px;line-height:1.6;margin:0 0 14px;white-space:pre-wrap}
+  .opts{display:grid;gap:9px;padding-bottom:9px}
+  .opt{display:flex;gap:11px;align-items:flex-start;text-align:left;width:100%;
+       background:var(--card2);border:1.5px solid transparent;border-radius:12px;
+       padding:12px 13px;font-size:15px;line-height:1.5;color:var(--text)}
+  .opt:active{transform:none}
+  .opt .k{flex:none;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.12);
+          display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-top:1px}
+  .opt.correct{border-color:var(--ok);background:rgba(34,197,94,.15)}
+  .opt.correct .k{background:var(--ok);color:#fff}
+  .opt.wrong{border-color:var(--no);background:rgba(239,68,68,.15)}
+  .opt.wrong .k{background:var(--no);color:#fff}
+  .opt.dim{opacity:.5}
+  .exp{margin-bottom:12px;background:rgba(79,140,255,.09);border-left:3px solid var(--acc);
+       border-radius:0 10px 10px 0;padding:11px 13px;font-size:14px;line-height:1.65;color:#cbd6ef}
+  .exp b{color:#9fc0ff}
+  .res{font-size:15px;font-weight:600;margin-bottom:7px}
+  .res.y{color:var(--ok)} .res.n{color:var(--no)}
+  .nav{display:flex;gap:9px}
+  .nav button{flex:1}
+  .nav button.main{flex:2}
+  .view{display:none} .view.on{display:block}
+  .list .item{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:9px}
+  .list .qq{font-size:14.5px;line-height:1.5;margin:7px 0 9px}
+  .list .aa{font-size:13.5px;color:#9fe8b8;line-height:1.5}
+  .list .ee{font-size:13px;color:var(--muted);line-height:1.6;margin-top:6px}
+  .list .rowbtns{display:flex;gap:8px;margin-top:9px}
+  .list .rowbtns button{font-size:13px;padding:7px 11px}
+  .empty{text-align:center;color:var(--muted);font-size:14px;padding:50px 0;line-height:1.9}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:13px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 8px;text-align:center}
+  .stat b{display:block;font-size:21px;font-weight:700}
+  .stat span{font-size:11px;color:var(--muted)}
+  .sect{font-size:14px;font-weight:600;margin:16px 2px 9px;color:#c8d3ee}
+  .settings label{display:flex;justify-content:space-between;align-items:center;background:var(--card);
+    border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:8px;font-size:14.5px}
+  .settings select{font:inherit;font-size:14px;background:var(--card2);color:var(--text);
+    border:1px solid var(--line);border-radius:9px;padding:7px 9px}
+  .catrow{display:flex;justify-content:space-between;background:var(--card);border:1px solid var(--line);
+          border-radius:11px;padding:11px 13px;margin-bottom:7px;font-size:14px}
+  .catrow span:last-child{color:var(--muted)}
+  .hintline{font-size:12px;color:var(--muted);line-height:1.7;margin:10px 2px}
+  .big{font-size:34px;font-weight:800;color:#9fc0ff;letter-spacing:-1px}
+  .genbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;text-align:center;margin-bottom:14px}
+  .genbox p{margin:6px 0 0;font-size:12px;color:var(--muted);line-height:1.7}
+</style>
+</head>
+<body>
+
+<div class="view on" id="v-quiz">
+  <header>
+    <h1>护资刷题</h1>
+    <div class="topbtn">
+      <button id="btn-wrong" class="p">错题 <b id="wrong-n">0</b></button>
+      <button id="btn-more">设置</button>
+    </div>
+  </header>
+  <div class="bar">
+    <span class="chip" id="chip-cat">全部</span>
+    <span class="chip" id="chip-count">0/0</span>
+    <div class="progress"><i id="prog"></i></div>
+  </div>
+  <div id="qwrap"></div>
+</div>
+
+<div class="view" id="v-wrong">
+  <header>
+    <h1>错题本</h1>
+    <div class="topbtn">
+      <button id="btn-practice-wrong" class="p">练错题</button>
+      <button id="btn-back1">返回</button>
+    </div>
+  </header>
+  <div class="list" id="wrong-list"></div>
+</div>
+
+<div class="view" id="v-more">
+  <header>
+    <h1>设置与统计</h1>
+    <div class="topbtn"><button id="btn-back2">返回</button></div>
+  </header>
+  <div class="genbox">
+    <div class="big" id="pool-size">0</div>
+    <div style="font-size:12px;color:var(--muted)">当前可生成的不同题目总量</div>
+    <p>题目由「知识模板 + 随机参数」实时生成：数值题每次换数字，选择题每次打乱选项顺序，点「换一批新题」重新洗牌。</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="s-total">0</b><span>累计做题</span></div>
+    <div class="stat"><b id="s-right">0</b><span>答对</span></div>
+    <div class="stat"><b id="s-rate">0%</b><span>正确率</span></div>
+  </div>
+  <div class="sect">练习范围</div>
+  <div class="settings">
+    <label>科目
+      <select id="sel-cat">
+        <option value="all">全部科目</option>
+        <option>基础护理学</option>
+        <option>内科护理学</option>
+        <option>外科护理学</option>
+        <option>妇产科护理学</option>
+        <option>儿科护理学</option>
+        <option>急救与综合</option>
+      </select>
+    </label>
+    <label>每轮题数
+      <select id="sel-count">
+        <option value="10">10 题</option>
+        <option value="20" selected>20 题</option>
+        <option value="30">30 题</option>
+        <option value="50">50 题</option>
+      </select>
+    </label>
+  </div>
+  <div class="sect">题库分布</div>
+  <div id="cat-stats"></div>
+  <div class="nav" style="margin-top:14px">
+    <button id="btn-restart" class="p">换一批新题</button>
+    <button id="btn-reset">清空记录</button>
+  </div>
+</div>
+
+<script src="./questions.js"></script>
+<script src="./engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var S_WRONG = 'nq_wrong_v2', S_STAT = 'nq_stat_v2', S_CFG = 'nq_cfg_v2';
+  var $ = function (id) { return document.getElementById(id); };
+  function loadJ(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }
+  function saveJ(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+  var wrongBook = loadJ(S_WRONG, {});
+  var stat = loadJ(S_STAT, { total: 0, right: 0 });
+  var cfg = loadJ(S_CFG, { cat: 'all', count: 20 });
+  var state = { list: [], idx: 0, answered: false, mode: 'normal' };
+
+  function newRound(mode) {
+    var B = window.BANK;
+    if (mode === 'wrong') {
+      var wrongPool = [];
+      Object.keys(wrongBook).forEach(function (k) {
+        var w = wrongBook[k];
+        if (!w || !w.tplKey) return;
+        var tpl = null, kind = null;
+        B.numeric.forEach(function (t) { if (t.key === w.tplKey) { tpl = t; kind = 'num'; } });
+        if (!tpl) B.text.forEach(function (t) { if (t.key === w.tplKey) { tpl = t; kind = 'txt'; } });
+        if (tpl) wrongPool.push({ kind: kind, tpl: tpl });
+      });
+      wrongPool.sort(function () { return Math.random() - 0.5; });
+      state.list = [];
+      var seen = {};
+      wrongPool.forEach(function (it) {
+        if (state.list.length >= 50) return;
+        var q = it.kind === 'num' ? window.QUIZ.makeNumeric(it.tpl) : window.QUIZ.makeText(it.tpl);
+        if (!seen[q.uid]) { seen[q.uid] = 1; state.list.push(q); }
+      });
+    } else {
+      state.list = window.QUIZ.generate({ cat: cfg.cat, count: cfg.count, mode: 'normal' });
+    }
+    state.mode = mode;
+    state.idx = 0;
+    state.answered = false;
+    renderQuiz();
+  }
+
+  function cur() { return state.list[state.idx]; }
+
+  function renderQuiz() {
+    var wrap = $('qwrap');
+    $('chip-cat').textContent = state.mode === 'wrong' ? '错题练习' : (cfg.cat === 'all' ? '全部科目' : cfg.cat);
+    if (!state.list.length) {
+      wrap.innerHTML = '<div class="empty">错题本是空的 🎉<br>先去刷题吧，答错的会自动进来</div>';
+      $('chip-count').textContent = '0/0'; $('prog').style.width = '0%';
+      return;
+    }
+    var it = cur();
+    $('chip-count').textContent = (state.idx + 1) + '/' + state.list.length;
+    $('prog').style.width = ((state.idx + 1) / state.list.length * 100) + '%';
+
+    var html = '<div class="qcard"><div class="meta">' +
+      '<span class="tag">' + esc(it.cat) + '</span>' +
+      '<span class="tag t2">单选题</span>' +
+      (wrongBook[it.uid] ? '<span class="tag t3">错 ' + wrongBook[it.uid].count + ' 次</span>' : '') +
+      '</div><p class="qtext">' + esc(it.q) + '</p><div class="opts" id="opts">';
+    it.opts.forEach(function (t, i) {
+      html += '<button class="opt" data-i="' + i + '"><span class="k">' + 'ABCDE'[i] + '</span><span>' + esc(t) + '</span></button>';
+    });
+    html += '</div></div><div id="feedback"></div>';
+    wrap.innerHTML = html;
+    Array.prototype.forEach.call($('opts').children, function (b) {
+      b.onclick = function () { choose(parseInt(b.getAttribute('data-i'), 10)); };
+    });
+  }
+
+  function choose(i) {
+    if (state.answered) return;
+    state.answered = true;
+    var it = cur();
+    var ok = i === it.ans;
+
+    stat.total++; if (ok) stat.right++;
+    saveJ(S_STAT, stat);
+
+    if (!ok) {
+      var rec = wrongBook[it.uid] || { count: 0 };
+      rec.count++; rec.lastAt = Date.now();
+      rec.tplKey = it.uid.split('|')[0];
+      rec.snap = { q: it.q, opts: it.opts, ans: it.ans, exp: it.exp, cat: it.cat };
+      wrongBook[it.uid] = rec;
+      saveJ(S_WRONG, wrongBook);
+    }
+    updateWrong();
+
+    Array.prototype.forEach.call($('opts').children, function (b, k) {
+      b.disabled = true;
+      b.className = k === it.ans ? 'opt correct' : (k === i ? 'opt wrong' : 'opt dim');
+    });
+
+    var fb = $('feedback');
+    fb.innerHTML = '<div class="exp"><div class="res ' + (ok ? 'y' : 'n') + '">' +
+      (ok ? '✓ 回答正确' : '✗ 答错了，正确答案：' + 'ABCDE'[it.ans] + '. ' + esc(it.opts[it.ans])) +
+      '</div><b>解析：</b>' + esc(it.exp) + '</div>' +
+      '<div class="nav">' +
+      '<button id="btn-prev">上一题</button>' +
+      '<button id="btn-next" class="p main">' + (state.idx === state.list.length - 1 ? '再来一轮新题' : '下一题') + '</button>' +
+      '</div>';
+    $('btn-prev').onclick = function () {
+      if (state.idx > 0) { state.idx--; state.answered = false; renderQuiz(); window.scrollTo({ top: 0 }); }
+    };
+    $('btn-next').onclick = function () {
+      if (state.idx < state.list.length - 1) { state.idx++; state.answered = false; renderQuiz(); window.scrollTo({top:0,behavior:'smooth'}); }
+      else { newRound(state.mode); window.scrollTo({top:0,behavior:'smooth'}); }
+    };
+    fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function updateWrong() { $('wrong-n').textContent = Object.keys(wrongBook).length; }
+
+  function renderWrong() {
+    var keys = Object.keys(wrongBook).sort(function (a, b) { return (wrongBook[b].lastAt || 0) - (wrongBook[a].lastAt || 0); });
+    var box = $('wrong-list');
+    if (!keys.length) {
+      box.innerHTML = '<div class="empty">错题本是空的 🎉<br>答错的题会自动收录到这里</div>';
+      return;
+    }
+    var html = '';
+    keys.forEach(function (k) {
+      var w = wrongBook[k], s = w.snap;
+      if (!s) return;
+      html += '<div class="item" data-k="' + esc(k) + '">' +
+        '<div class="meta"><span class="tag">' + esc(s.cat) + '</span><span class="tag t2">错 ' + w.count + ' 次</span></div>' +
+        '<div class="qq">' + esc(s.q) + '</div>' +
+        '<div class="aa">正确答案：' + 'ABCDE'[s.ans] + '. ' + esc(s.opts[s.ans]) + '</div>' +
+        '<div class="ee">' + esc(s.exp) + '</div>' +
+        '<div class="rowbtns"><button class="rm">移出错题本</button></div></div>';
+    });
+    box.innerHTML = html;
+    Array.prototype.forEach.call(box.querySelectorAll('.rm'), function (b) {
+      b.onclick = function () {
+        var k = b.parentNode.parentNode.getAttribute('data-k');
+        delete wrongBook[k]; saveJ(S_WRONG, wrongBook); updateWrong(); renderWrong();
+      };
+    });
+  }
+
+  function renderMore() {
+    $('s-total').textContent = stat.total;
+    $('s-right').textContent = stat.right;
+    $('s-rate').textContent = stat.total ? Math.round(stat.right / stat.total * 100) + '%' : '0%';
+    $('pool-size').textContent = window.QUIZ.estimateTotal().toLocaleString();
+    $('sel-cat').value = cfg.cat;
+    $('sel-count').value = String(cfg.count);
+    var B = window.BANK, cats = {};
+    B.numeric.concat(B.text).forEach(function (t) {
+      if (t.fixed === -1) return;
+      cats[t.cat] = (cats[t.cat] || 0) + 1;
+    });
+    $('cat-stats').innerHTML = Object.keys(cats).map(function (c) {
+      return '<div class="catrow"><span>' + esc(c) + '</span><span>' + cats[c] + ' 个知识点</span></div>';
+    }).join('');
+  }
+
+  function show(v) {
+    ['v-quiz', 'v-wrong', 'v-more'].forEach(function (id) { $(id).className = 'view' + (id === v ? ' on' : ''); });
+    window.scrollTo({ top: 0 });
+  }
+
+  $('btn-wrong').onclick = function () { renderWrong(); show('v-wrong'); };
+  $('btn-more').onclick = function () { renderMore(); show('v-more'); };
+  $('btn-back1').onclick = function () { show('v-quiz'); };
+  $('btn-back2').onclick = function () { show('v-quiz'); };
+  $('btn-practice-wrong').onclick = function () { newRound('wrong'); show('v-quiz'); };
+  $('sel-cat').onchange = function () { cfg.cat = this.value; saveJ(S_CFG, cfg); newRound('normal'); show('v-quiz'); };
+  $('sel-count').onchange = function () { cfg.count = parseInt(this.value, 10); saveJ(S_CFG, cfg); newRound('normal'); show('v-quiz'); };
+  $('btn-restart').onclick = function () { newRound('normal'); show('v-quiz'); };
+  $('btn-reset').onclick = function () {
+    if (!confirm('确定清空错题本和统计数据吗？')) return;
+    wrongBook = {}; stat = { total: 0, right: 0 };
+    saveJ(S_WRONG, wrongBook); saveJ(S_STAT, stat);
+    updateWrong(); renderMore(); newRound('normal');
+  };
+
+  updateWrong();
+  newRound('normal');
+})();
+</script>
+</body>
+</html>
