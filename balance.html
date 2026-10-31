@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1020" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>API 余额</title>
+<style>
+  :root{
+    --bg:#0b1020; --card:rgba(255,255,255,.06); --line:rgba(255,255,255,.1);
+    --text:#e8ecf7; --muted:#8b96b3; --bad:#f87171; --accent:#5b8cff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{
+    background:var(--bg); min-height:100vh; color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC",system-ui,sans-serif;
+    font-size:16px; -webkit-font-smoothing:antialiased;
+    padding:max(16px,env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));
+  }
+  header{display:flex;align-items:center;justify-content:space-between;margin:0 2px 14px}
+  h1{font-size:19px;margin:0}
+  .sub{color:var(--muted);font-size:12px;margin-top:3px}
+  .acts{display:flex;gap:8px}
+  button{
+    font:inherit;border:0;border-radius:12px;padding:10px 14px;cursor:pointer;
+    background:rgba(255,255,255,.1);color:var(--text);font-size:15px;
+  }
+  button:active{transform:scale(.96)}
+  button.p{background:linear-gradient(135deg,#5b8cff,#7c3aed);color:#fff;font-weight:600}
+  button:disabled{opacity:.5}
+  .cards{display:grid;gap:11px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 15px}
+  .row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px;white-space:nowrap}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .amount{font-size:26px;font-weight:700;letter-spacing:-.5px;white-space:nowrap;text-align:right}
+  .amount small{font-size:13px;opacity:.7;margin-left:3px}
+  .label{color:var(--muted);font-size:11px;margin-top:2px;text-align:right}
+  .err{color:var(--bad);font-size:13.5px;text-align:right}
+  .details{margin-top:10px;border-top:1px dashed var(--line);padding-top:9px;display:grid;gap:5px}
+  .detail{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted)}
+  .detail b{color:#cdd6ee;font-weight:500}
+  .foot{text-align:center;color:var(--muted);font-size:11px;margin-top:18px;line-height:1.6}
+  .sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;z-index:50}
+  .sheet.open{display:flex}
+  .panel{
+    width:100%;background:#121a30;border-radius:22px 22px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));
+    max-height:88vh;overflow:auto;border-top:1px solid rgba(255,255,255,.12);
+  }
+  .panel h2{font-size:16px;margin:0 0 4px}
+  .hint{color:var(--muted);font-size:12px;margin:0 0 14px;line-height:1.5}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:#aab4cf;margin-bottom:6px}
+  .field input{
+    width:100%;padding:12px 13px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.05);color:var(--text);font-size:16px;outline:none;
+  }
+  .field input:focus{border-color:var(--accent)}
+  .pa{display:flex;gap:8px;margin-top:16px}
+  .pa button{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>API 余额</h1>
+    <div class="sub" id="status">尚未刷新</div>
+  </div>
+  <div class="acts">
+    <button id="refresh" class="p">刷新</button>
+    <button id="cfg">⚙︎</button>
+  </div>
+</header>
+
+<main class="cards" id="cards"></main>
+<div class="foot">保存在本机浏览器 · 点刷新更新余额</div>
+
+<div class="sheet" id="sheet">
+  <div class="panel">
+    <h2>API 密钥</h2>
+    <p class="hint">密钥只存在这台手机上，直接请求各平台的官方接口。留空表示不查询该平台。</p>
+    <div id="fields"></div>
+    <div class="pa">
+      <button id="clear">清空</button>
+      <button id="save" class="p">保存并刷新</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var SK = 'api-balance-keys-v2', CK = 'api-balance-cache-v2';
+  var PROVIDERS = [
+    { id: 'deepseek',    name: 'DeepSeek',       color: '#4d6bfe', query: deepseek },
+    { id: 'moonshot',    name: '月之暗面 Kimi',  color: '#a3a3a3', query: moonshot },
+    { id: 'siliconflow', name: '硅基流动',       color: '#7c3aed', query: siliconflow },
+    { id: 'openrouter',  name: 'OpenRouter',     color: '#0ea5e9', query: openrouter }
+  ];
+
+  function $(id) { return document.getElementById(id); }
+  function loadKeys() { try { return JSON.parse(localStorage.getItem(SK) || '{}') || {}; } catch (e) { return {}; } }
+  function saveKeys(k) { try { localStorage.setItem(SK, JSON.stringify(k)); } catch (e) {} }
+  function loadCache() { try { return JSON.parse(localStorage.getItem(CK) || 'null'); } catch (e) { return null; } }
+  function saveCache(c) { try { localStorage.setItem(CK, JSON.stringify(c)); } catch (e) {} }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function redact(k) {
+    if (!k) return '';
+    return k.length > 12 ? k.slice(0, 6) + '…' + k.slice(-4) : k.slice(0, 2) + '***';
+  }
+  function num(v) { var n = Number(v); return isFinite(n) ? n : NaN; }
+
+  function getJSON(url, key) {
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, 20000);
+    return fetch(url, {
+      headers: { Authorization: 'Bearer ' + key, Accept: 'application/json' },
+      signal: ctl.signal
+    }).then(function (res) {
+      clearTimeout(timer);
+      return res.text().then(function (t) {
+        var d = null;
+        try { d = JSON.parse(t); } catch (e) {}
+        return { status: res.status, data: d };
+      });
+    }, function (e) {
+      clearTimeout(timer);
+      throw e;
+    });
+  }
+
+  function deepseek(key) {
+    return getJSON('https://api.deepseek.com/user/balance', key).then(function (r) {
+      if (r.status === 401 || r.status === 403) return { ok: false, message: 'API Key 无效' };
+      if (r.status !== 200 || !r.data) return { ok: false, message: '接口返回 ' + r.status };
+      var infos = r.data.balance_infos || [];
+      var main = null, i;
+      for (i = 0; i < infos.length; i++) if (infos[i].currency === 'CNY') { main = infos[i]; break; }
+      if (!main) main = infos[0];
+      if (!main) return { ok: false, message: '未返回余额' };
+      return {
+        ok: true,
+        primary: { amount: num(main.total_balance), currency: main.currency, label: '总余额' },
+        details: [
+          { label: '充值余额', value: main.topped_up_balance + ' ' + main.currency },
+          { label: '赠送余额', value: main.granted_balance + ' ' + main.currency },
+          { label: '可用状态', value: r.data.is_available ? '正常' : '余额不足' }
+        ]
+      };
+    });
+  }
+
+  function moonshot(key) {
+    var hosts = ['https://api.moonshot.cn', 'https://api.moonshot.ai'];
+    function tryAt(n) {
+      if (n >= hosts.length) return Promise.resolve({ ok: false, message: '查询失败' });
+      return getJSON(hosts[n] + '/v1/users/me/balance', key).then(function (r) {
+        if (r.status === 401 || r.status === 403) return { ok: false, message: 'API Key 无效' };
+        if (r.status !== 200 || !r.data) return tryAt(n + 1);
+        if (r.data.status === false || (r.data.code !== undefined && r.data.code !== 0)) {
+          return { ok: false, message: (r.data.error && r.data.error.message) || r.data.msg || '查询失败' };
+        }
+        var d = r.data.data || {};
+        return {
+          ok: true,
+          primary: { amount: num(d.available_balance), currency: 'USD', label: '可用余额' },
+          details: [
+            { label: '现金余额', value: d.cash_balance + ' USD' },
+            { label: '代金券', value: d.voucher_balance + ' USD' },
+            { label: '接口域名', value: hosts[n].replace('https://', '') }
+          ]
+        };
+      }, function () { return tryAt(n + 1); });
+    }
+    return tryAt(0);
+  }
+
+  function siliconflow(key) {
+    return getJSON('https://api.siliconflow.cn/v1/user/info', key).then(function (r) {
+      if (r.status === 401 || r.status === 403) return { ok: false, message: 'API Key 无效' };
+      if (r.status !== 200 || !r.data) return { ok: false, message: '接口返回 ' + r.status };
+      var d = r.data.data || {};
+      if (d.totalBalance === undefined && d.chargeBalance === undefined) {
+        return { ok: false, message: r.data.message || '未返回余额' };
+      }
+      return {
+        ok: true,
+        primary: { amount: num(d.totalBalance), currency: 'CNY', label: '总余额' },
+        details: [
+          { label: '充值余额', value: d.chargeBalance + ' CNY' },
+          { label: '赠送余额', value: d.balance + ' CNY' },
+          { label: '账户状态', value: d.status === 'normal' ? '正常' : String(d.status || '—') }
+        ]
+      };
+    });
+  }
+
+  function openrouter(key) {
+    return getJSON('https://openrouter.ai/api/v1/credits', key).then(function (r) {
+      if (r.status === 401 || r.status === 403) return { ok: false, message: 'API Key 无效' };
+      if (r.status !== 200 || !r.data) return { ok: false, message: '接口返回 ' + r.status };
+      var d = r.data.data || r.data;
+      var total = num(d.total_credits), used = num(d.total_usage);
+      if (!isFinite(total)) return { ok: false, message: '未返回额度' };
+      if (!isFinite(used)) used = 0;
+      return {
+        ok: true,
+        primary: { amount: total - used, currency: 'USD', label: '剩余额度' },
+        details: [
+          { label: '已用', value: '$' + used.toFixed(4) },
+          { label: '累计充值', value: '$' + total.toFixed(4) }
+        ]
+      };
+    });
+  }
+
+  function fmtMoney(n, cur) {
+    if (!isFinite(n)) return '—';
+    var a = Math.abs(n), s;
+    if (a >= 1000) s = n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    else if (a >= 1) s = n.toFixed(2);
+    else s = n.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+    var sym = cur === 'USD' ? '$' : cur === 'CNY' ? '¥' : (cur || '');
+    return esc(s) + '<small>' + esc(sym) + '</small>';
+  }
+
+  function render(results, at, loading) {
+    var map = {};
+    (results || []).forEach(function (r) { map[r.id] = r; });
+    var html = '';
+    PROVIDERS.forEach(function (p) {
+      var r = map[p.id], right, details = '';
+      if (!r) {
+        right = '<div class="err">未配置</div><div class="label">点右上角 ⚙︎</div>';
+      } else if (r.ok) {
+        right = '<div class="amount">' + fmtMoney(r.primary.amount, r.primary.currency) + '</div>' +
+                '<div class="label">' + esc(r.primary.label || '余额') + '</div>';
+        if (r.details && r.details.length) {
+          details = '<div class="details">' + r.details.map(function (d) {
+            return '<div class="detail"><span>' + esc(d.label) + '</span><b>' + esc(d.value) + '</b></div>';
+          }).join('') + '</div>';
+        }
+      } else {
+        right = '<div class="err">' + esc(r.message || '查询失败') + '</div>' +
+                '<div class="label">' + esc(r.keyHint || '') + '</div>';
+      }
+      html += '<section class="card">' +
+        '<div class="row"><div class="brand"><span class="dot" style="background:' + p.color + '"></span>' +
+        esc(p.name) + '</div><div>' + right + '</div></div>' + details + '</section>';
+    });
+    $('cards').innerHTML = html;
+    if (at) {
+      var t = new Date(at);
+      $('status').textContent = (loading ? '刷新中… ' : '') + '更新于 ' +
+        ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2);
+    }
+  }
+
+  var busy = false;
+  function refresh() {
+    if (busy) return;
+    var keys = loadKeys();
+    var todo = PROVIDERS.filter(function (p) { return (keys[p.id] || '').trim(); });
+    if (!todo.length) { render([], null, false); openSheet(); return; }
+
+    busy = true;
+    $('refresh').disabled = true;
+    var cached = loadCache();
+    if (cached) render(cached.results, cached.at, true);
+    $('status').textContent = '刷新中…';
+
+    var out = [];
+    var pending = todo.length;
+    todo.forEach(function (p) {
+      var key = keys[p.id].trim();
+      var started = Date.now();
+      p.query(key).then(function (res) {
+        res.id = p.id;
+        res.keyHint = redact(key);
+        res.elapsed = Date.now() - started;
+        out.push(res);
+      }, function (e) {
+        var msg = e && e.name === 'AbortError' ? '请求超时' : '网络错误';
+        out.push({ id: p.id, keyHint: redact(key), ok: false, message: msg, elapsed: Date.now() - started });
+      }).then(function () {
+        pending--;
+        if (pending === 0) {
+          var order = {};
+          PROVIDERS.forEach(function (p, i) { order[p.id] = i; });
+          out.sort(function (a, b) { return order[a.id] - order[b.id]; });
+          var payload = { at: new Date().toISOString(), results: out };
+          saveCache(payload);
+          render(out, payload.at, false);
+          $('status').textContent = '更新于 ' +
+            ('0' + new Date().getHours()).slice(-2) + ':' + ('0' + new Date().getMinutes()).slice(-2);
+          busy = false;
+          $('refresh').disabled = false;
+        }
+      });
+    });
+  }
+
+  function openSheet() {
+    var keys = loadKeys();
+    $('fields').innerHTML = PROVIDERS.map(function (p) {
+      return '<div class="field"><label>' + esc(p.name) + '</label>' +
+        '<input type="password" id="k-' + p.id + '" autocapitalize="off" autocorrect="off" ' +
+        'spellcheck="false" autocomplete="off" placeholder="粘贴 API Key，留空不查询" value="' +
+        esc(keys[p.id] || '') + '"></div>';
+    }).join('');
+    $('sheet').className = 'sheet open';
+  }
+  function closeSheet() { $('sheet').className = 'sheet'; }
+
+  $('cfg').onclick = openSheet;
+  $('refresh').onclick = refresh;
+  $('sheet').onclick = function (e) { if (e.target === $('sheet')) closeSheet(); };
+  $('save').onclick = function () {
+    var keys = {};
+    PROVIDERS.forEach(function (p) {
+      var v = ($('k-' + p.id) || {}).value || '';
+      if (v.trim()) keys[p.id] = v.trim();
+    });
+    saveKeys(keys);
+    closeSheet();
+    refresh();
+  };
+  $('clear').onclick = function () {
+    PROVIDERS.forEach(function (p) { var el = $('k-' + p.id); if (el) el.value = ''; });
+  };
+
+  var cached0 = loadCache();
+  if (cached0) render(cached0.results, cached0.at, false);
+  refresh();
+})();
+</script>
+</body>
+</html>
